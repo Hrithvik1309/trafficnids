@@ -1,38 +1,287 @@
-# Dependencies
-node_modules
-.pnp
-.pnp.js
+# ═══════════════════════════════════════════════════════════════
+#  🔒 NIDS Dashboard - Comprehensive .gitignore
+#  Protects API keys, credentials, and sensitive data
+# ═══════════════════════════════════════════════════════════════
 
-# Testing
-coverage
-
-# Production
-build
-dist
-dist-ssr
-*.local
-
-# Environment
+# ── 🔑 CRITICAL: API Keys & Credentials ──────────────────────
+# NEVER commit these files - they contain sensitive API keys
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+server/.env
+server/.env.local
+server/.env.development.local
+server/.env.test.local
+server/.env.production.local
 
-# Logs
+# Firebase service account keys (HIGHLY SENSITIVE)
+**/serviceAccountKey.json
+**/firebase-adminsdk-*.json
+trafficred-df988-firebase-adminsdk-*.json
+trafficred-df988-firebase-adminsdk-fbsvc-aeafd0c876.json
+
+# API key files
+api-keys.txt
+keys.txt
+credentials.json
+config/keys.js
+config/credentials.js
+
+# ── 📦 Dependencies & Package Files ──────────────────────────
+node_modules/
+server/node_modules/
+.pnp
+.pnp.js
+package-lock.json
+server/package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ── 🏗️ Build & Distribution Files ────────────────────────────
+build/
+dist/
+dist-ssr/
+out/
+.next/
+.nuxt/
+.vuepress/dist/
+.serverless/
+.vercel/
+.netlify/
+
+# ── 🧪 Testing & Coverage ────────────────────────────────────
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+test-results.xml
+coverage.xml
+
+# ── 📝 Logs & Debug Files ────────────────────────────────────
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+debug.log
+error.log
+access.log
 
-# Editor
+# ── 💻 Editor & IDE Files ────────────────────────────────────
 .vscode/*
 !.vscode/extensions.json
-.idea
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# ── 🔄 Cache & Temporary Files ───────────────────────────────
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+.npm/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# ── 🌐 Runtime & Process Files ───────────────────────────────
+.pid
+*.pid
+*.seed
+*.pid.lock
+.lock-wscript
+
+# ── 📊 Database & Storage Files ──────────────────────────────
+*.sqlite
+*.sqlite3
+*.db
+database.json
+db.json
+*.mdb
+*.accdb
+
+# ── 🔐 Security & Certificate Files ──────────────────────────
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+ssl/
+certs/
+private/
+
+# ── ☁️ Cloud & Deployment Files ──────────────────────────────
+.serverless/
+.vercel/
+.netlify/
+.firebase/
+.gcloud/
+.aws/
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+
+# ── 📱 Mobile & Native Files ──────────────────────────────────
+*.ipa
+*.apk
+*.aab
+android/
+ios/
+.expo/
+.expo-shared/
+
+# ── 🎨 Asset & Media Files (Large) ───────────────────────────
+*.mov
+*.mp4
+*.avi
+*.mkv
+*.wmv
+*.flv
+*.webm
+*.m4v
+*.3gp
+*.3g2
+*.rm
+*.rmvb
+*.asf
+
+# Large images (keep small ones for UI)
+*.psd
+*.ai
+*.sketch
+*.fig
+*.xd
+
+# ── 📚 Documentation Builds ──────────────────────────────────
+docs/build/
+docs/.vuepress/dist/
+.docusaurus/
+storybook-static/
+
+# ── 🔧 Tool-specific Files ───────────────────────────────────
+# Webpack
+.webpack/
+
+# Rollup
+.rollup.cache/
+
+# Vite
+.vite/
+
+# ESLint
+.eslintcache
+
+# Prettier
+.prettiercache
+
+# Stylelint
+.stylelintcache
+
+# Jest
+.jest/
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
+
+# Playwright
+test-results/
+playwright-report/
+
+# ── 🏠 OS & System Files ─────────────────────────────────────
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ── 📋 Backup & Archive Files ────────────────────────────────
+*.bak
+*.backup
+*.old
+*.orig
+*.tmp
+*.temp
+*.swp
+*.swo
+*.un~
+*.rej
+*.patch
+
+# ── 🎯 Project-specific Exclusions ───────────────────────────
+# Custom API testing files
+api-test-results.json
+test-data/
+mock-data/
+sample-data/
+
+# User uploads (if any)
+uploads/
+user-files/
+temp-uploads/
+
+# Generated reports
+reports/
+analytics/
+stats/
+
+# ═══════════════════════════════════════════════════════════════
+#  ⚠️  SECURITY REMINDER:
+#  Always review files before committing to ensure no sensitive
+#  data (API keys, passwords, personal info) is included!
+# ═══════════════════════════════════════════════════════════════
