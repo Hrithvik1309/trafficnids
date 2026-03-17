@@ -76,9 +76,9 @@ function ResultCard({ result }) {
       }}>
         {[
           { label: 'AbuseIPDB Score',  value: result.abuseScore,  source: 'AbuseIPDB',      color: '#4FC3F7' },
-          { label: 'Fraud Score',      value: result.fraudScore,  source: 'IPQualityScore',  color: '#C084FC' },
+          { label: 'Proxy Score',      value: result.proxyScore,  source: 'IP-API',         color: '#4ADE80' },
           { label: 'Abuse Reports',    value: result.totalReports,source: 'AbuseIPDB',       color: '#FBBF24' },
-          { label: 'Abuse Velocity',   value: result.abuseVelocity, source: 'IPQualityScore',color: '#F87171' },
+          { label: 'Usage Type',       value: result.usageType,   source: 'AbuseIPDB',      color: '#F87171' },
         ].map(item => (
           <div key={item.label} style={{ padding: '8px 0' }}>
             <div style={{ fontSize: 9, color: '#374151', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
@@ -96,11 +96,9 @@ function ResultCard({ result }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {[
           { key: 'isProxy', label: 'Proxy',  color: '#FF6B6B' },
-          { key: 'isVPN',   label: 'VPN',    color: '#C084FC' },
-          { key: 'isTOR',   label: 'TOR',    color: '#F97316' },
-          { key: 'isBot',   label: 'Bot',    color: '#FF4444' },
+          { key: 'isHosting', label: 'Hosting', color: '#4ADE80' },
         ].map(flag => {
-          const val = result.rawIPQS?.[flag.key]
+          const val = result.rawIPAPI?.[flag.key]
           return (
             <div key={flag.key} style={{
               fontSize: 10, padding: '4px 10px', borderRadius: 5,
@@ -109,7 +107,7 @@ function ResultCard({ result }) {
               color: val ? flag.color : '#374151',
             }}>
               {val ? '✓' : '✗'} {flag.label}
-              <span style={{ fontSize: 9, marginLeft: 4, opacity: 0.6 }}>IPQS</span>
+              <span style={{ fontSize: 9, marginLeft: 4, opacity: 0.6 }}>IP-API</span>
             </div>
           )
         })}
@@ -128,27 +126,6 @@ export default function Scanner() {
   const fileRef = useRef()
 
   console.log('Scanner render - result:', result)
-
-  async function testIPQSAPI() {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const response = await fetch('/api/test-ipqs')
-      const data = await response.json()
-      
-      if (data.success) {
-        alert(`✅ IPQS API is working!\nKey: ${data.keyPrefix}\nTest IP: ${data.testIP}\nCountry: ${data.results.country}\nFraud Score: ${data.results.fraudScore}%`)
-      } else {
-        setError(`❌ IPQS API Test Failed: ${data.error}`)
-        console.log('IPQS Error Details:', data)
-      }
-    } catch (e) {
-      setError(`❌ IPQS Test Error: ${e.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function handleScan() {
     if (!ip.trim()) return
@@ -197,7 +174,7 @@ export default function Scanner() {
         </div>
         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#F9FAFB' }}>IP Scanner</h1>
         <p style={{ margin: '6px 0 0', fontSize: 12, color: '#374151', lineHeight: 1.6 }}>
-          Queries <span style={{ color: '#4FC3F7' }}>AbuseIPDB</span> + <span style={{ color: '#C084FC' }}>IPQualityScore</span> in parallel.
+          Queries <span style={{ color: '#4FC3F7' }}>AbuseIPDB</span> + <span style={{ color: '#4ADE80' }}>IP-API</span> in parallel.
           Results are stored to Firebase Firestore automatically.
         </p>
       </div>
@@ -225,20 +202,6 @@ export default function Scanner() {
             onFocus={e  => e.target.style.borderColor = '#FF4444'}
             onBlur={e   => e.target.style.borderColor = '#1F2937'}
           />
-          <button
-            onClick={testIPQSAPI}
-            disabled={loading}
-            style={{
-              padding: '11px 16px', borderRadius: 7, cursor: 'pointer',
-              background: 'rgba(255,165,0,0.15)',
-              border: '1px solid rgba(255,165,0,0.4)',
-              color: '#FFA500',
-              fontSize: 11, fontFamily: "'IBM Plex Mono', monospace",
-              fontWeight: 600,
-            }}
-          >
-            🛡️ Test API
-          </button>
           <button
             onClick={handleScan}
             disabled={loading || !ip.trim()}

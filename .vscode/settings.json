@@ -1,2 +1,18 @@
 {
+  "json.schemaDownload.enable": true,
+  "json.validate.enable": true,
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "package.json"
+      ],
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/package.json"
+    }
+  ],
+  "http.proxySupport": "override",
+  "http.systemCertificates": true,
+  "json.maxItemsComputed": 5000,
+  "files.associations": {
+    "package.json": "json"
+  }
 }

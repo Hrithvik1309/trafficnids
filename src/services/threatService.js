@@ -5,22 +5,17 @@
 //
 //  APIs Used:
 //  ┌─────────────────────────────────────────────────────────────────────────┐
-//  │ 1. AbuseIPDB                                                            │
-//  │    Site:     https://www.abuseipdb.com                                  │
-//  │    Endpoint: GET https://api.abuseipdb.com/api/v2/check                 │
-//  │    Params:   ipAddress (string), maxAgeInDays (int, default 90)         │
-//  │    Headers:  Key: <VITE_ABUSEIPDB_API_KEY>, Accept: application/json   │
+//  │ 1. AbuseIPDB (via Vercel serverless function)                          │
+//  │    Endpoint: GET /api/abuseipdb?ip={ip}                                 │
 //  │    Returns:  abuseConfidenceScore (0–100), totalReports, countryCode,  │
 //  │              usageType, isp, domain, lastReportedAt                     │
 //  │    Free tier: 1,000 checks / day                                        │
 //  ├─────────────────────────────────────────────────────────────────────────┤
-//  │ 2. IPQualityScore (IPQS)                                                │
-//  │    Site:     https://www.ipqualityscore.com                             │
-//  │    Endpoint: GET https://ipqualityscore.com/api/json/ip/{KEY}/{IP}      │
-//  │    Params:   strictness (0–3), allow_public_access_points (bool)        │
-//  │    Returns:  fraud_score (0–100), proxy, vpn, tor, bot_status,         │
-//  │              abuse_velocity, timezone, city, region, country_code      │
-//  │    Free tier: 5,000 checks / month                                      │
+//  │ 2. IP-API.com                                                           │
+//  │    Endpoint: GET http://ip-api.com/json/{ip}                            │
+//  │    Returns:  country, countryCode, city, isp, org, proxy, hosting      │
+//  │    Free tier: 45 requests / minute (no API key needed)                 │
+//  │    NOTE: Must use http:// not https:// on free tier                    │
 //  └─────────────────────────────────────────────────────────────────────────┘
 //
 //  Both APIs are called in parallel via Promise.allSettled so a failure
@@ -30,39 +25,23 @@
 import axios from 'axios'
 import { saveThreatLog, saveAlert } from './firebase'
 
-const ABUSEIPDB_KEY = import.meta.env.VITE_ABUSEIPDB_API_KEY
-const IPQS_KEY      = import.meta.env.VITE_IPQS_API_KEY
-
-// ── CORS proxy needed for both APIs in browser environments ──────────────────
-// Both APIs block direct browser requests. Using cors-anywhere alternative
-const CORS_PROXY = 'https://corsproxy.io/?'
-
 // ─────────────────────────────────────────────────────────────────────────────
 //  1. AbuseIPDB — Check IP against crowd-sourced abuse reports
-//     Endpoint: GET https://api.abuseipdb.com/api/v2/check
+//     Endpoint: GET /api/abuseipdb?ip={ip} (Vercel serverless function)
 // ─────────────────────────────────────────────────────────────────────────────
 async function checkAbuseIPDB(ip) {
-  const apiUrl = `https://api.abuseipdb.com/api/v2/check?ipAddress=${ip}&maxAgeInDays=90&verbose=true`
-  const url = `${CORS_PROXY}${apiUrl}`
+  console.log('AbuseIPDB Request for IP:', ip)
   
-  console.log('AbuseIPDB Request URL:', url)
-  
-  const { data } = await axios.get(url, {
-    headers: {
-      Key:    ABUSEIPDB_KEY,
-      Accept: 'application/json',
-    },
+  const { data } = await axios.get(`/api/abuseipdb?ip=${ip}`, {
     timeout: 15000,
   })
   
   console.log('AbuseIPDB Response:', data)
-  
-  const parsedData = typeof data === 'string' ? JSON.parse(data) : data
 
-  const d = parsedData.data
+  const d = data.data
   return {
     source:               'AbuseIPDB',
-    abuseScore:           d?.abuseConfidenceScore ?? 0,   // 0–100
+    abuseScore:           d?.abuseConfidencePercentage ?? 0,   // 0–100
     totalReports:         d?.totalReports          ?? 0,
     countryCode:          d?.countryCode           ?? 'XX',
     usageType:            d?.usageType             ?? 'Unknown',
@@ -74,52 +53,60 @@ async function checkAbuseIPDB(ip) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  2. IPQualityScore — Proxy / VPN / Bot / Fraud detection
-//     Endpoint: GET https://ipqualityscore.com/api/json/ip/{KEY}/{IP}
+//  2. IP-API.com — Geolocation and proxy/hosting detection
+//     Endpoint: GET http://ip-api.com/json/{ip}
 // ─────────────────────────────────────────────────────────────────────────────
-async function checkIPQS(ip) {
-  // IPQS also needs CORS proxy in browser
-  const apiUrl = `https://ipqualityscore.com/api/json/ip/${IPQS_KEY}/${ip}?strictness=1&allow_public_access_points=true`
-  const url = `${CORS_PROXY}${apiUrl}`
+async function checkIPAPI(ip) {
+  const url = `http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,isp,org,proxy,hosting,query`
   
-  console.log('IPQS Request URL:', url)
+  console.log('IP-API Request URL:', url)
   
   const { data } = await axios.get(url, {
     timeout: 15000,
   })
   
-  console.log('IPQS Response:', data)
-  
-  const parsedData = typeof data === 'string' ? JSON.parse(data) : data
+  console.log('IP-API Response:', data)
 
-  if (!parsedData.success) throw new Error(parsedData.message || 'IPQS check failed')
+  if (data.status !== 'success') {
+    throw new Error(data.message || 'IP-API check failed')
+  }
 
   return {
-    source:      'IPQualityScore',
-    fraudScore:  parsedData.fraud_score   ?? 0,   // 0–100
-    isProxy:     parsedData.proxy         ?? false,
-    isVPN:       parsedData.vpn           ?? false,
-    isTOR:       parsedData.tor           ?? false,
-    isBot:       parsedData.bot_status    ?? false,
-    abuseVelocity: parsedData.abuse_velocity ?? 'none',  // none / low / medium / high
-    city:        parsedData.city          ?? '',
-    region:      parsedData.region        ?? '',
-    country:     parsedData.country_code  ?? 'XX',
-    timezone:    parsedData.timezone      ?? '',
-    org:         parsedData.organization  ?? '',
+    source:      'IP-API',
+    country:     data.country      ?? 'Unknown',
+    countryCode: data.countryCode  ?? 'XX',
+    region:      data.region       ?? '',
+    regionName:  data.regionName   ?? '',
+    city:        data.city         ?? '',
+    isp:         data.isp          ?? 'Unknown',
+    org:         data.org          ?? 'Unknown',
+    isProxy:     data.proxy        ?? false,
+    isHosting:   data.hosting      ?? false,
+    query:       data.query        ?? ip,
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Combine both sources into a single normalised ThreatReport
 // ─────────────────────────────────────────────────────────────────────────────
-function buildThreatReport(ip, abuseResult, ipqsResult) {
-  // Weighted composite risk score
-  //   AbuseIPDB abuse score     → 40% weight
-  //   IPQS fraud score          → 60% weight
+function buildThreatReport(ip, abuseResult, ipapiResult) {
+  // Calculate proxy score based on IP-API data
+  let proxyScore = 0
+  if (ipapiResult?.isProxy && ipapiResult?.isHosting) {
+    proxyScore = 90  // Both proxy AND hosting
+  } else if (ipapiResult?.isProxy) {
+    proxyScore = 80  // Proxy only
+  } else if (ipapiResult?.isHosting) {
+    proxyScore = 40  // Hosting only
+  } else {
+    proxyScore = 0   // Neither
+  }
+
+  // Updated weighted composite risk score formula
+  // AbuseIPDB abuse score → 60% weight
+  // Proxy score          → 40% weight
   const abuseScore = abuseResult?.abuseScore ?? 0
-  const fraudScore = ipqsResult?.fraudScore  ?? 0
-  const riskScore  = Math.round((abuseScore * 0.4) + (fraudScore * 0.6))
+  const riskScore  = Math.round((abuseScore * 0.6) + (proxyScore * 0.4))
 
   // Severity tier
   let severity = 'Clean'
@@ -130,30 +117,27 @@ function buildThreatReport(ip, abuseResult, ipqsResult) {
 
   // Threat type tags
   const tags = []
-  if (ipqsResult?.isProxy)      tags.push('Proxy')
-  if (ipqsResult?.isVPN)        tags.push('VPN')
-  if (ipqsResult?.isTOR)        tags.push('TOR')
-  if (ipqsResult?.isBot)        tags.push('Bot')
+  if (ipapiResult?.isProxy)      tags.push('Proxy')
+  if (ipapiResult?.isHosting)    tags.push('Hosting')
   if (abuseResult?.totalReports > 0) tags.push('Reported')
-  if (tags.length === 0)        tags.push('Clean')
+  if (tags.length === 0)         tags.push('Clean')
 
   return {
     ip,
     riskScore,
     severity,
     tags,
-    countryCode:   ipqsResult?.country     || abuseResult?.countryCode || 'XX',
-    city:          ipqsResult?.city        || '',
-    region:        ipqsResult?.region      || '',
-    isp:           abuseResult?.isp        || ipqsResult?.org || 'Unknown',
-    usageType:     abuseResult?.usageType  || 'Unknown',
+    countryCode:   ipapiResult?.countryCode || abuseResult?.countryCode || 'XX',
+    city:          ipapiResult?.city        || '',
+    region:        ipapiResult?.regionName  || '',
+    isp:           abuseResult?.isp         || ipapiResult?.isp || 'Unknown',
+    usageType:     abuseResult?.usageType   || 'Unknown',
     abuseScore,
-    fraudScore,
+    proxyScore,    // Changed from fraudScore to proxyScore
     totalReports:  abuseResult?.totalReports ?? 0,
-    abuseVelocity: ipqsResult?.abuseVelocity ?? 'none',
     lastReportedAt:abuseResult?.lastReportedAt ?? null,
     rawAbuseIPDB:  abuseResult,
-    rawIPQS:       ipqsResult,
+    rawIPAPI:      ipapiResult,  // Changed from rawIPQS to rawIPAPI
     scannedAt:     new Date().toISOString(),
   }
 }
@@ -175,30 +159,30 @@ export async function scanIP(ip) {
   }
 
   // Call both APIs in parallel — one failure won't block the other
-  const [abuseSettled, ipqsSettled] = await Promise.allSettled([
+  const [abuseSettled, ipapiSettled] = await Promise.allSettled([
     checkAbuseIPDB(trimmedIP),
-    checkIPQS(trimmedIP),
+    checkIPAPI(trimmedIP),
   ])
 
   const abuseResult = abuseSettled.status === 'fulfilled' ? abuseSettled.value : null
-  const ipqsResult  = ipqsSettled.status  === 'fulfilled' ? ipqsSettled.value  : null
+  const ipapiResult = ipapiSettled.status === 'fulfilled' ? ipapiSettled.value : null
 
   // Log errors for debugging
   if (abuseSettled.status === 'rejected') {
     console.error('AbuseIPDB Error:', abuseSettled.reason)
   }
-  if (ipqsSettled.status === 'rejected') {
-    console.error('IPQS Error:', ipqsSettled.reason)
+  if (ipapiSettled.status === 'rejected') {
+    console.error('IP-API Error:', ipapiSettled.reason)
   }
 
-  if (!abuseResult && !ipqsResult) {
+  if (!abuseResult && !ipapiResult) {
     const errors = []
     if (abuseSettled.status === 'rejected') errors.push(`AbuseIPDB: ${abuseSettled.reason.message}`)
-    if (ipqsSettled.status === 'rejected') errors.push(`IPQS: ${ipqsSettled.reason.message}`)
+    if (ipapiSettled.status === 'rejected') errors.push(`IP-API: ${ipapiSettled.reason.message}`)
     throw new Error(`Both API calls failed.\n${errors.join('\n')}`)
   }
 
-  const report = buildThreatReport(trimmedIP, abuseResult, ipqsResult)
+  const report = buildThreatReport(trimmedIP, abuseResult, ipapiResult)
 
   // ── Persist to Firestore ─────────────────────────────────
   try {

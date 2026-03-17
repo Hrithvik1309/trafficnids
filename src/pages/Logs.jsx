@@ -32,7 +32,7 @@ export default function Logs() {
       Country:      l.countryCode,
       ISP:          l.isp,
       AbuseScore:   l.abuseScore,
-      FraudScore:   l.fraudScore,
+      FraudScore:   l.proxyScore,
       TotalReports: l.totalReports,
       ScannedAt:    formatTimestamp(l.createdAt || l.scannedAt),
     }))
@@ -112,7 +112,7 @@ export default function Logs() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#060A10' }}>
-                  {['IP Address','Risk','Severity','Tags','Country','ISP','Abuse','Fraud','Reports','Time'].map(h => (
+                  {['IP Address','Risk','Severity','Tags','Country','ISP','Abuse','Proxy','Reports','Time'].map(h => (
                     <th key={h} style={{
                       padding: '10px 14px', textAlign: 'left', fontSize: 9,
                       color: '#374151', letterSpacing: '0.12em', textTransform: 'uppercase',
@@ -159,7 +159,7 @@ export default function Logs() {
                         {log.isp}
                       </td>
                       <td style={{ padding: '9px 14px', fontSize: 11, color: '#4FC3F7', fontWeight: 600 }}>{log.abuseScore}</td>
-                      <td style={{ padding: '9px 14px', fontSize: 11, color: '#C084FC', fontWeight: 600 }}>{log.fraudScore}</td>
+                      <td style={{ padding: '9px 14px', fontSize: 11, color: '#4ADE80', fontWeight: 600 }}>{log.proxyScore}</td>
                       <td style={{ padding: '9px 14px', fontSize: 11, color: '#FBBF24' }}>{log.totalReports}</td>
                       <td style={{ padding: '9px 14px', fontSize: 10, color: '#374151', whiteSpace: 'nowrap' }}>
                         {formatTimestamp(log.createdAt || log.scannedAt)}
