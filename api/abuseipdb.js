@@ -31,8 +31,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid IP address format' });
     }
 
-    // Get API key from environment
-    const apiKey = process.env.VITE_ABUSEIPDB_API_KEY;
+    // Get API key from environment (try both with and without VITE_ prefix)
+    const apiKey = process.env.ABUSEIPDB_API_KEY || process.env.VITE_ABUSEIPDB_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ error: 'AbuseIPDB API key not configured' });
     }

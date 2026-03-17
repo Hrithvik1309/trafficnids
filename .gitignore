@@ -211,6 +211,9 @@ cypress/downloads/
 test-results/
 playwright-report/
 
+# Kiro MCP Configuration
+.kiro/settings/mcp.json
+
 # ── 🏠 OS & System Files ─────────────────────────────────────
 # Windows
 Thumbs.db
